@@ -2,17 +2,19 @@
 
 ## 🔺 What is Skynet
 
-Skynet is a lightweight command line interface to Large Language Models for control of real robots using Bash.
+Skynet is a lightweight command line interface for LLMs to control real robots using Bash.
 
-It provides an [MCP host](https://modelcontextprotocol.io/docs/learn/architecture) that calls [Docker Model Runner](https://www.docker.com/products/model-runner/) to control robots, drones, and other physical devices that provide an [MCP server](https://modelcontextprotocol.io/docs/learn/server-concepts) interface.  See [ROBOTS.md](ROBOTS.md) for a list of devices with MCP servers.
+It can run entirely on your own machine, or can be configured to run using remote services.
 
-Skynet supports multiple step interactions for models such as [Qwen 2.5 Instruct](https://hub.docker.com/r/ai/qwen2.5). See [MODELS.md](MODELS.md) for a list of models that are known to support multistep actions.
+![Skynet interactive](./images/skynet-example.png)
 
-![MCP interactive](./images/skynet-example.png)
+Skynet provides an [MCP host](https://modelcontextprotocol.io/docs/learn/architecture) that calls a model server such as [Docker Model Runner](https://www.docker.com/products/model-runner/) to allow Large Language Models (LLM), Small Language Models (SLM), and Tiny Language Models (TLM), to control robots, drones, and other physical devices that provide an [MCP server](https://modelcontextprotocol.io/docs/learn/server-concepts) interface. See [ROBOTS.md](ROBOTS.md) for a list of devices with MCP servers.
+
+It supports multiple step interactions when using models such as [Qwen 2.5 Instruct](https://hub.docker.com/r/ai/qwen2.5). See [MODELS.md](MODELS.md) for a list of models that are known to support multistep actions.
 
 ## 🔺 How Skynet works
 
-Skynet is written in [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) using [Osprey](https://github.com/k33g/osprey).
+Skynet is written in [Bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) using [Osprey](https://github.com/k33g/osprey).
 
 ### Architecture
 
@@ -66,11 +68,26 @@ sequenceDiagram
         end
 ```
 
-## 🔺 Using Skynet
+## 🔺 Running Skynet
+
+```shell
+$ ./skynet.sh -h
+Usage: ./skynet.sh [OPTIONS]
+Options:
+ -h, --help           Display this help message
+ -v, --version        Display version
+ -d, --debug          Enable debug mode
+ -m, --model          Model to use
+ -p, --pull-model     Pull latest model
+ -s, --model-server   Model server to use
+ -i, --instructions   System instructions to use
+ -t, --temperature    Temperature for model
+ -r, --robot-server   Robot servers to use
+```
 
 You must have any robot MCP servers already running in order to run Skynet. See [ROBOTS.md](ROBOTS.md) for a list of some known physical devices with MCP server interfaces.
 
-Then just run the `skynet.sh` command.
+Then run the `skynet.sh` command, including any flags that may be needed.
 
 ### Additional command options
 
@@ -117,7 +134,7 @@ Env var to set the directory in which to find Osprey. Defaults to your home dire
 
 ## 🔺 Installing Skynet
 
-You can use Skynet with the [Docker Model Runner](https://www.docker.com/products/model-runner/) with any model that supports instructions.
+You can use Skynet with [Docker Model Runner](https://www.docker.com/products/model-runner/) with any model that supports tool instructions.
 
 See [MODELS.md](MODELS.md) for a list of models that are known to support multistep actions.
 
