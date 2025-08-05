@@ -2,15 +2,15 @@
 
 ## 🔺 What is Skynet
 
-Skynet is a lightweight command line interface for LLMs to control real robots using Bash.
+Skynet is a lightweight command line interface for LLMs to control real robots and drones using Bash.
 
 It can run entirely on your own machine, or can be configured to run using remote services.
 
 ![Skynet interactive](./images/skynet-example.png)
 
-Skynet provides an [MCP host](https://modelcontextprotocol.io/docs/learn/architecture) that calls a model server such as [Docker Model Runner](https://www.docker.com/products/model-runner/) to allow Large Language Models (LLM), Small Language Models (SLM), and Tiny Language Models (TLM), to control robots, drones, and other physical devices that provide an [MCP server](https://modelcontextprotocol.io/docs/learn/server-concepts) interface. See [ROBOTS.md](ROBOTS.md) for a list of devices with MCP servers.
+Skynet provides an [MCP host](https://modelcontextprotocol.io/docs/learn/architecture) that calls a model server such as [Docker Model Runner](https://www.docker.com/products/model-runner/) to allow Large Language Models (LLM), Small Language Models (SLM), and Tiny Language Models (TLM), to control physical devices that provide an [MCP server](https://modelcontextprotocol.io/docs/learn/server-concepts) interface. See [ROBOTS.md](ROBOTS.md) for some known devices with MCP servers.
 
-It supports multiple step interactions when using models such as [Qwen 2.5 Instruct](https://hub.docker.com/r/ai/qwen2.5). See [MODELS.md](MODELS.md) for a list of models that are known to support multistep actions.
+It supports multiple step interactions when using models such as [Qwen 2.5 Instruct](https://hub.docker.com/r/ai/qwen2.5). See [MODELS.md](MODELS.md) for some models that are known to support multistep actions.
 
 ## 🔺 How Skynet works
 
