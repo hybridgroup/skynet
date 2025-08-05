@@ -2,12 +2,7 @@
 OSPREY_INSTALL=${OSPREY_INSTALL:-"${HOME}"}
 . "${OSPREY_INSTALL}/osprey.sh"
 
-SKYNET_VERSION="0.0.1"
-
-DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
-MODEL=${MODEL_RUNNER_TOOL_MODEL:-"ai/qwen2.5:latest"}
-TEMPERATURE=${MODEL_RUNNER_TEMPERATURE:-"0.0"}
-MODEL_RUNNER_PULL=${MODEL_RUNNER_PULL:-"true"}
+skynet_version="0.0.1"
 
 read -r -d '' DEFAULT_SYSTEM_INSTRUCTION <<- EOM
 You are a robot.
@@ -18,176 +13,288 @@ EOM
 
 SYSTEM_INSTRUCTION=${SYSTEM_INSTRUCTION:-"${DEFAULT_SYSTEM_INSTRUCTION}"}
 
-MCP_SERVER=${MCP_SERVER:-"http://localhost:9090"}
+model_server="http://localhost:12434/engines/llama.cpp/v1"
+skynet_model="ai/qwen2.5:latest"
+temperature="0.0"
+pull_latest_model=true
+robot_server="http://localhost:9090"
+debug_mode=false
+robot_tools="[]"
+tool_server_map=()
 
-DEBUG_MODE=false
-if [ "$1" = "-d" ] || [ "$1" = "--debug" ]; then
-  DEBUG_MODE=true
-fi
+# Function to display script usage
+usage() {
+  echo "Usage: $0 [OPTIONS]"
+  echo "Options:"
+  echo " -h, --help           Display this help message"
+  echo " -v, --version        Display version"
+  echo " -d, --debug          Enable debug mode"
+  echo " -m, --model          Model to use"
+  echo " -p, --pull-model     Pull latest model"
+  echo " -s, --model-server   Model server to use"
+  echo " -i, --instructions   System instructions to use"
+  echo " -t, --temperature    Temperature for model"
+  echo " -r, --robot-server   Robot servers to use"
+}
+
+has_argument() {
+  [[ ("$1" == *=* && -n ${1#*=}) || ( ! -z "$2" && "$2" != -*)  ]];
+}
+
+extract_argument() {
+  echo "${2:-${1#*=}}"
+}
+
+handle_options() {
+  while [ $# -gt 0 ]; do
+    case $1 in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      -v | --version)
+        show_version
+        exit 0
+        ;;
+      -d | --debug)
+        debug_mode=true
+        ;;
+      -m | --model*)
+        if ! has_argument $@; then
+          echo "Model not specified." >&2
+          usage
+          exit 1
+        fi
+
+        skynet_model=$(extract_argument $@)
+        shift
+        ;;
+      -p | --pull-model*)
+        if ! has_argument $@; then
+          echo "Pull model not specified." >&2
+          usage
+          exit 1
+        fi
+
+        pull_latest_model=$(extract_argument $@)
+        shift
+        ;;
+      -s | --model-server*)
+        if ! has_argument $@; then
+          echo "Model server not specified." >&2
+          usage
+          exit 1
+        fi
+
+        model_server=$(extract_argument $@)
+        shift
+        ;;
+      -t | --temperature*)
+        if ! has_argument $@; then
+          echo "Temperature not specified." >&2
+          usage
+          exit 1
+        fi
+
+        temperature=$(extract_argument $@)
+        shift
+        ;;
+      -i | --instructions*)
+        if ! has_argument $@; then
+          echo "System instructions not specified." >&2
+          usage
+          exit 1
+        fi
+
+        SYSTEM_INSTRUCTION=$(extract_argument $@)
+        shift
+        ;;
+      -r | --robot-server*)
+        if ! has_argument $@; then
+          echo "Robot server not specified." >&2
+          usage
+          exit 1
+        fi
+
+        robot_server=$(extract_argument $@)
+        shift
+        ;;
+      *)
+        echo "Invalid option: $1" >&2
+        usage
+        exit 1
+        ;;
+    esac
+    shift
+  done
+}
+
+show_banner() {
+  echo "███████╗██╗  ██╗██╗   ██╗███╗   ██╗███████╗████████╗";
+  echo "██╔════╝██║ ██╔╝╚██╗ ██╔╝████╗  ██║██╔════╝╚══██╔══╝";
+  echo "███████╗█████╔╝  ╚████╔╝ ██╔██╗ ██║█████╗     ██║   ";
+  echo "╚════██║██╔═██╗   ╚██╔╝  ██║╚██╗██║██╔══╝     ██║   ";
+  echo "███████║██║  ██╗   ██║   ██║ ╚████║███████╗   ██║   ";
+  echo "╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═══╝╚══════╝   ╚═╝   ";
+  echo "                                                    ";
+}
+
+show_version() {
+  echo "🔺 Skynet version $skynet_version"
+}
+
+show_instructions() {
+  echo "🔺 System instruction:"
+  echo "${SYSTEM_INSTRUCTION}"
+}
+
+setup_robot_tools() {
+  IFS=',' read -ra SERVER_ARRAY <<< "$robot_server"
+
+  # Build a map of function name to MCP server
+  for SERVER in "${SERVER_ARRAY[@]}"; do
+    TOOLS_JSON=$(get_mcp_http_tools "$SERVER")
+    if [[ -z "$TOOLS_JSON" || "$TOOLS_JSON" == "null" ]]; then
+      continue
+    fi
+
+    function_nameS=$(echo "$TOOLS_JSON" | jq -r '.[].name')
+    for fname in $function_nameS; do
+      tool_server_map["$fname"]="$SERVER"
+    done
+    robot_tools=$(jq -s 'add' <(echo "$robot_tools") <(echo "$TOOLS_JSON"))
+  done
+}
+
+# main
+handle_options "$@"
 
 clear
+show_banner
+show_version
+echo "🧠 loading model ${skynet_model}"
 
-echo "███████╗██╗  ██╗██╗   ██╗███╗   ██╗███████╗████████╗";
-echo "██╔════╝██║ ██╔╝╚██╗ ██╔╝████╗  ██║██╔════╝╚══██╔══╝";
-echo "███████╗█████╔╝  ╚████╔╝ ██╔██╗ ██║█████╗     ██║   ";
-echo "╚════██║██╔═██╗   ╚██╔╝  ██║╚██╗██║██╔══╝     ██║   ";
-echo "███████║██║  ██╗   ██║   ██║ ╚████║███████╗   ██║   ";
-echo "╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═══╝╚══════╝   ╚═╝   ";
-echo "                                                    ";
-
-echo "🔺 Skynet version $SKYNET_VERSION"
-echo "🧠 loading model ${MODEL}"
-
-if [[ "$MODEL_RUNNER_PULL" == "true" ]]; then
-  docker model pull ${MODEL}
+if [[ "$pull_latest_model" == "true" ]]; then
+  docker model pull ${skynet_model}
 fi
 
 echo ""
 
-# Allow multiple MCP_SERVER addresses separated by comma
-MCP_SERVERS=${MCP_SERVER:-"http://localhost:9090"}
-IFS=',' read -ra SERVER_ARRAY <<< "$MCP_SERVERS"
+setup_robot_tools
 
-COMBINED_TOOLS="[]"
-
-# Build a map of function name to MCP server
-declare -A FUNCTION_SERVER_MAP
-for SERVER in "${SERVER_ARRAY[@]}"; do
-  TOOLS_JSON=$(get_mcp_http_tools "$SERVER")
-  if [[ -z "$TOOLS_JSON" || "$TOOLS_JSON" == "null" ]]; then
-    continue
-  fi
-
-  # For each tool, map its function name to the server
-  FUNCTION_NAMES=$(echo "$TOOLS_JSON" | jq -r '.[].name')
-  for fname in $FUNCTION_NAMES; do
-    FUNCTION_SERVER_MAP["$fname"]="$SERVER"
-  done
-  # Combine JSON arrays using jq
-  COMBINED_TOOLS=$(jq -s 'add' <(echo "$COMBINED_TOOLS") <(echo "$TOOLS_JSON"))
-done
-
-if [[ "$COMBINED_TOOLS" == "[]" ]]; then
-    echo "🔴 no MCP servers. Exiting..."
+if [[ "$robot_tools" == "[]" ]]; then
+    echo "🔴 no robot MCP servers. Exiting..."
     exit 1
 fi
 
-TOOLS=$(transform_to_openai_format "$COMBINED_TOOLS")
-if [[ -z "$TOOLS" ]]; then
-    echo "🔴 no MCP server tools found. Exiting..."
+available_tools=$(transform_to_openai_format "$robot_tools")
+if [[ -z "$available_tools" ]]; then
+    echo "🔴 no robot MCP server tools found. Exiting..."
     exit 1
 fi
 
-if [[ "$DEBUG_MODE" == "true" ]]; then
+if [[ "$debug_mode" == "true" ]]; then
   echo "---------------------------------------------------------"
   echo "Available tools:"
-  echo "${TOOLS}" 
+  echo "${available_tools}" 
   echo "---------------------------------------------------------"
 fi
 
-# needed to handle the ASSISTANT_RESPONSE being created from a subprocess.
-shopt -s lastpipe
+if [[ "$debug_mode" == "true" ]]; then
+  show_instructions
+  echo ""
+fi
 
-# Initialize conversation history array
-CONVERSATION_HISTORY=()
-ASSISTANT_RESPONSE=""
+conversation_history=()
 
 while true; do
-  STOPPED="false"
-  TOOLS_CALLED="false"
-  USER_CONTENT=$(gum write --placeholder "🎤 Skynet ready. Enter command (/bye to exit).")
+  stopped="false"
+  tools_called="false"
+  user_command=$(gum write --placeholder "🎤 Skynet ready. Enter command (/bye to exit).")
   
-  if [[ "$USER_CONTENT" == "/bye" ]]; then
+  if [[ "$user_command" == "/bye" ]]; then
     echo "Goodbye!"
     break
   fi
 
-  echo "💬 ${USER_CONTENT}"
+  echo "💬 ${user_command}"
   echo ""
 
   # Add user message to conversation history
-  add_user_message CONVERSATION_HISTORY "${USER_CONTENT}"
+  add_user_message conversation_history "${user_command}"
 
-  while [ "$STOPPED" != "true" ]; do
-    # Build messages array conversation history
-    MESSAGES=$(build_messages_array CONVERSATION_HISTORY)
+  while [ "$stopped" != "true" ]; do
+    messages=$(build_messages_array conversation_history)
 
-    read -r -d '' DATA <<- EOM
+    read -r -d '' payload <<- EOM
 {
-  "model": "${MODEL}",
+  "model": "${skynet_model}",
   "options": {
-    "temperature": ${TEMPERATURE}
+    "temperature": ${temperature}
   },
-  "messages": [${MESSAGES}],
-  "tools": ${TOOLS},
+  "messages": [${messages}],
+  "tools": ${available_tools},
   "parallel_tool_calls": false,
   "tool_choice": "auto"
 }
 EOM
 
-    RESULT=$(osprey_tool_calls ${DMR_BASE_URL} "${DATA}")
+    result=$(osprey_tool_calls ${model_server} "${payload}")
 
-    if [[ "$DEBUG_MODE" == "true" ]]; then
-      echo "📝 raw JSON response:"
-      print_raw_response "${RESULT}"
+    if [[ "$debug_mode" == "true" ]]; then
+      echo "📝 model response:"
+      print_raw_response "${result}"
     fi
 
-    FINISH_REASON=$(get_finish_reason "${RESULT}")
-    case $FINISH_REASON in
+    finish_reason=$(get_finish_reason "${result}")
+    case $finish_reason in
       tool_calls)
-        TOOLS_CALLED="true"
-        # Get tool calls for further processing
-        TOOL_CALLS=$(get_tool_calls "${RESULT}")
+        tools_called="true"
+        tool_calls=$(get_tool_calls "${result}")
 
-        if [[ -n "$TOOL_CALLS" ]]; then
-            add_tool_calls_message CONVERSATION_HISTORY "${TOOL_CALLS}"
+        if [[ -n "$tool_calls" ]]; then
+            add_tool_calls_message conversation_history "${tool_calls}"
 
-            for tool_call in $TOOL_CALLS; do
-                FUNCTION_NAME=$(get_function_name "$tool_call")
-                FUNCTION_ARGS=$(get_function_args "$tool_call")
-                CALL_ID=$(get_call_id "$tool_call")
+            for tool_call in $tool_calls; do
+                function_name=$(get_function_name "$tool_call")
+                function_args=$(get_function_args "$tool_call")
+                tool_call_id=$(get_call_id "$tool_call")
 
-                # Find the correct MCP server for this function
-                SERVER_TO_USE="${FUNCTION_SERVER_MAP[$FUNCTION_NAME]}"
-                if [[ -z "$SERVER_TO_USE" ]]; then
-                  SERVER_TO_USE="$MCP_SERVER" # fallback
+                tool_server_for_call="${tool_server_map[$function_name]}"
+                if [[ -z "$tool_server_for_call" ]]; then
+                  tool_server_for_call="$robot_server" # fallback
                 fi
 
-                echo "🛠️ calling tool '$FUNCTION_NAME' on $SERVER_TO_USE with $FUNCTION_ARGS"
+                echo "🛠️ calling tool '$function_name' on $tool_server_for_call with $function_args"
 
-                # Execute function via MCP
-                MCP_RESPONSE=$(call_mcp_http_tool "$SERVER_TO_USE" "$FUNCTION_NAME" "$FUNCTION_ARGS")
-                RESULT_CONTENT=$(get_tool_content_http "$MCP_RESPONSE")
+                mcp_response=$(call_mcp_http_tool "$tool_server_for_call" "$function_name" "$function_args")
+                result_content=$(get_tool_content_http "$mcp_response")
 
-                echo "✅ result $RESULT_CONTENT"
+                echo "✅ result $result_content"
 
-                # If .content exists, use it; otherwise, use the whole RESULT_CONTENT
-                TOOL_RESULT=$(echo "${RESULT_CONTENT}" | jq -e '.content' >/dev/null 2>&1 && echo "${RESULT_CONTENT}" | jq -r '.content' || echo "${RESULT_CONTENT}")
-                add_tool_message CONVERSATION_HISTORY "${CALL_ID}" "${TOOL_RESULT}"
+                tool_result=$(echo "${result_content}" | jq -e '.content' >/dev/null 2>&1 && echo "${result_content}" | jq -r '.content' || echo "${result_content}")
+                add_tool_message conversation_history "${tool_call_id}" "${tool_result}"
             done
         else
-          if [[ "$DEBUG_MODE" == "true" ]]; then
+          if [[ "$debug_mode" == "true" ]]; then
             echo "🔵 no tool calls found in response"
           fi
         fi
         ;;
-
       stop)
-        STOPPED="true"
-        ASSISTANT_MESSAGE=$(echo "${RESULT}" | jq -r '.choices[0].message.content')
+        stopped="true"
+        assistant_message=$(echo "${result}" | jq -r '.choices[0].message.content')
 
-        if [[ "$TOOLS_CALLED" == "true" ]]; then
+        if [[ "$tools_called" == "true" ]]; then
           echo ""
         fi
 
-        echo "🤖 ${ASSISTANT_MESSAGE}"
+        echo "🤖 ${assistant_message}"
 
-        # Add assistant response to conversation history (from callback)
-        add_assistant_message CONVERSATION_HISTORY "${ASSISTANT_MESSAGE}"
+        add_assistant_message conversation_history "${assistant_message}"
         ;;
-
       *)
-        echo "🔴 unexpected model response: $FINISH_REASON"
+        echo "🔴 unexpected model response: $finish_reason"
         ;;
     esac
 

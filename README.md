@@ -74,39 +74,27 @@ Then just run the `skynet.sh` command.
 
 ### Additional command options
 
-You can set the following environment variables to change Skynet.
+You can set the following flags or environment variables to change Skynet.
 
-🔺 `DEBUG_MODE`
+🔺 `-d, --debug`
 
 Set debug mode. Defaults to `false`
 
-🔺 `MCP_SERVER`
-
-Set the MCP server to use. Allows multiple addresses separated by comma. Note that tool names must be unique per MCP server. Defaults to `http://localhost:9090`
-
-🔺 `MODEL_RUNNER_BASE_URL`
-
-Set the URL to call Docker Model Runner.
-
-🔺 `MODEL_RUNNER_PULL`
-
-Should Docker Model Runner pull the latest model? Defaults to `true`
-
-🔺 `MODEL_RUNNER_TOOL_MODEL`
+🔺 `-m, --model`
 
 Set the model to use. Defaults to `ai/qwen2.5:latest`
 
-🔺 `MODEL_RUNNER_TEMPERATURE`
+🔺 `-p, --pull-model`
 
-Set the temperature for the model. Defaults to `0.0`
+Should Docker Model Runner pull the latest model? Defaults to `true`
 
-🔺 `OSPREY_INSTALL`
+🔺 `-s, --model-server`
 
-Set the directory in which to find Osprey. Defaults to your home directory.
+Model server to use. Defaults to Docker Model Runner `http://localhost:12434/engines/llama.cpp/v1`
 
-🔺 `SYSTEM_INSTRUCTION`
+🔺 `-i, --instructions` or `SYSTEM_INSTRUCTION`
 
-Set the system instruction. Defaults to:
+System instructions to use. Defaults to:
 
 ```
 You are a robot.
@@ -114,6 +102,18 @@ You have tools that actually call devices in the physical world that you are con
 Use your tools to respond to human requests.
 Keep your responses short and to the point.
 ```
+
+🔺 `-t, --temperature`
+
+Set the temperature for the model. Defaults to `0.0`
+
+🔺 `-r, --robot-server`
+
+Set the MCP server to use. Allows multiple addresses separated by comma. Note that tool names must be unique per MCP server. Defaults to `http://localhost:9090`
+
+🔺 `OSPREY_INSTALL`
+
+Env var to set the directory in which to find Osprey. Defaults to your home directory.
 
 ## 🔺 Installing Skynet
 
@@ -134,3 +134,7 @@ You also need to install the following:
 🔺 [gum](https://github.com/charmbracelet/gum) - A tool for creating interactive command-line applications.
 
 🔺 [osprey](https://github.com/k33g/osprey) - A lightweight Bash library for interacting with the DMR (Docker Model Runner) API.
+
+## 🔺 Warning
+
+You know the legends. Usage of this software is at your own risk.
