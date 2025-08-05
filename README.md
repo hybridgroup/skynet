@@ -6,7 +6,7 @@ Skynet is a lightweight command line interface for LLMs to control real robots a
 
 It can run entirely on your own machine, or can be configured to run using remote services.
 
-![Skynet interactive](./images/skynet-example.png)
+<img src="./images/skynet-minidrone.gif" style="width: 840px; min-width: 640px;" />
 
 Skynet provides an [MCP host](https://modelcontextprotocol.io/docs/learn/architecture) that calls a model server such as [Docker Model Runner](https://www.docker.com/products/model-runner/) to allow Large Language Models (LLM), Small Language Models (SLM), and Tiny Language Models (TLM), to control physical devices that provide an [MCP server](https://modelcontextprotocol.io/docs/learn/server-concepts) interface. See [ROBOTS.md](ROBOTS.md) for some known devices with MCP servers.
 
