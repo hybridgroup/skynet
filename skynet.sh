@@ -12,7 +12,6 @@ Keep your responses short and to the point.
 EOM
 
 SYSTEM_INSTRUCTION=${SYSTEM_INSTRUCTION:-"${DEFAULT_SYSTEM_INSTRUCTION}"}
-
 model_server="http://localhost:12434/engines/llama.cpp/v1"
 skynet_model="ai/qwen2.5:latest"
 temperature="0.0"
@@ -22,7 +21,6 @@ debug_mode=false
 robot_tools="[]"
 tool_server_map=()
 
-# Function to display script usage
 usage() {
   echo "Usage: $0 [OPTIONS]"
   echo "Options:"
@@ -130,13 +128,14 @@ handle_options() {
 }
 
 show_banner() {
+  echo "----------------------------------------------------";
   echo "███████╗██╗  ██╗██╗   ██╗███╗   ██╗███████╗████████╗";
   echo "██╔════╝██║ ██╔╝╚██╗ ██╔╝████╗  ██║██╔════╝╚══██╔══╝";
   echo "███████╗█████╔╝  ╚████╔╝ ██╔██╗ ██║█████╗     ██║   ";
   echo "╚════██║██╔═██╗   ╚██╔╝  ██║╚██╗██║██╔══╝     ██║   ";
   echo "███████║██║  ██╗   ██║   ██║ ╚████║███████╗   ██║   ";
   echo "╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═══╝╚══════╝   ╚═╝   ";
-  echo "                                                    ";
+  echo "----------------------------------------------------";
 }
 
 show_version() {
@@ -149,20 +148,19 @@ show_instructions() {
 }
 
 setup_robot_tools() {
-  IFS=',' read -ra SERVER_ARRAY <<< "$robot_server"
+  IFS=',' read -ra server_array <<< "$robot_server"
 
-  # Build a map of function name to MCP server
-  for SERVER in "${SERVER_ARRAY[@]}"; do
-    TOOLS_JSON=$(get_mcp_http_tools "$SERVER")
-    if [[ -z "$TOOLS_JSON" || "$TOOLS_JSON" == "null" ]]; then
+  for server in "${server_array[@]}"; do
+    tools_json=$(get_mcp_http_tools "$server")
+    if [[ -z "$tools_json" || "$tools_json" == "null" ]]; then
       continue
     fi
 
-    function_nameS=$(echo "$TOOLS_JSON" | jq -r '.[].name')
+    function_nameS=$(echo "$tools_json" | jq -r '.[].name')
     for fname in $function_nameS; do
-      tool_server_map["$fname"]="$SERVER"
+      tool_server_map["$fname"]="$server"
     done
-    robot_tools=$(jq -s 'add' <(echo "$robot_tools") <(echo "$TOOLS_JSON"))
+    robot_tools=$(jq -s 'add' <(echo "$robot_tools") <(echo "$tools_json"))
   done
 }
 
@@ -198,9 +196,6 @@ if [[ "$debug_mode" == "true" ]]; then
   echo "Available tools:"
   echo "${available_tools}" 
   echo "---------------------------------------------------------"
-fi
-
-if [[ "$debug_mode" == "true" ]]; then
   show_instructions
   echo ""
 fi
@@ -220,7 +215,6 @@ while true; do
   echo "💬 ${user_command}"
   echo ""
 
-  # Add user message to conversation history
   add_user_message conversation_history "${user_command}"
 
   while [ "$stopped" != "true" ]; do
@@ -297,7 +291,6 @@ EOM
         echo "🔴 unexpected model response: $finish_reason"
         ;;
     esac
-
   done
   echo ""
 done
