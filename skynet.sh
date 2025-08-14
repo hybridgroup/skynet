@@ -1,8 +1,8 @@
 #!/bin/bash
-OSPREY_INSTALL=${OSPREY_INSTALL:-"${HOME}"}
+OSPREY_INSTALL=${OSPREY_INSTALL:-"."}
 . "${OSPREY_INSTALL}/osprey.sh"
 
-skynet_version="0.0.1"
+skynet_version="0.0.2"
 
 read -r -d '' DEFAULT_SYSTEM_INSTRUCTION <<- EOM
 You are a robot.
