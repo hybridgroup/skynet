@@ -68,6 +68,10 @@ sequenceDiagram
         end
 ```
 
+## 🔺 Installing Skynet
+
+See [INSTALL.md](INSTALL.md) for information on how to install Skynet.
+
 ## 🔺 Running Skynet
 
 ```shell
@@ -131,26 +135,6 @@ Set the MCP server to use. Allows multiple addresses separated by comma. Note th
 🔺 `OSPREY_INSTALL`
 
 Env var to set the directory in which to find Osprey. Defaults to your same directory as Skynet.
-
-## 🔺 Installing Skynet
-
-You can use Skynet with [Docker Model Runner](https://www.docker.com/products/model-runner/) with any model that supports tool instructions.
-
-See [MODELS.md](MODELS.md) for a list of models that are known to support multistep actions.
-
-You also need to install the following:
-
-🔺 jq - A lightweight and flexible command-line JSON processor.
-
-🔺 awk - A domain-specific language designed for text processing.
-
-🔺 curl - A command-line tool for transferring data with URLs.
-
-🔺 bash - A Unix shell and command language.
-
-🔺 [gum](https://github.com/charmbracelet/gum) - A tool for creating interactive command-line applications.
-
-🔺 [osprey](https://github.com/k33g/osprey) - A lightweight Bash library for interacting with the DMR (Docker Model Runner) API.
 
 ## 🔺 Warning
 
