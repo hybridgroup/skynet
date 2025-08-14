@@ -130,7 +130,7 @@ Set the MCP server to use. Allows multiple addresses separated by comma. Note th
 
 🔺 `OSPREY_INSTALL`
 
-Env var to set the directory in which to find Osprey. Defaults to your home directory.
+Env var to set the directory in which to find Osprey. Defaults to your same directory as Skynet.
 
 ## 🔺 Installing Skynet
 
